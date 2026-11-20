@@ -77,6 +77,8 @@ import com.example.factoid.ui.components.TextInputDialog
 import com.example.factoid.ui.components.paletteColorAt
 import com.example.factoid.ui.components.readableContentColor
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.heightIn
+import com.example.factoid.data.local.entity.FactoidEntity
 
 private sealed interface BoardDialog {
     data object CreateGroup : BoardDialog
@@ -110,7 +112,7 @@ fun BoardScreen(
     val content by viewModel.boardContent.collectAsState()
     val groups by viewModel.groups.collectAsState()
     val notebooks by viewModel.notebooks.collectAsState()
-    val counts by viewModel.notebookFactoidCounts.collectAsState()
+    val factoidsMap by viewModel.notebookFactoidsMap.collectAsState()
     val sortMode by viewModel.sortMode.collectAsState()
     val quickAddVisible by viewModel.quickAddVisible.collectAsState()
     val trashCount by viewModel.trashCount.collectAsState()
@@ -244,7 +246,7 @@ fun BoardScreen(
         ) { padding ->
             BoardCanvas(
                 content = content,
-                counts = counts,
+                factoidsMap = factoidsMap,
                 onOpenNotebook = onOpenNotebook,
                 onNotebookLongPress = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -478,7 +480,7 @@ private fun DrawerItem(
 @Composable
 private fun BoardCanvas(
     content: BoardContent,
-    counts: Map<Long, Int>,
+    factoidsMap: Map<Long, List<FactoidEntity>> ,
     onOpenNotebook: (Long) -> Unit,
     onNotebookLongPress: (NotebookEntity) -> Unit,
     onGroupLongPress: (GroupEntity) -> Unit,
@@ -516,7 +518,7 @@ private fun BoardCanvas(
                 GroupFrame(
                     item = item,
                     columns = columns,
-                    counts = counts,
+                    factoidsMap = factoidsMap,
                     onOpenNotebook = onOpenNotebook,
                     onNotebookLongPress = onNotebookLongPress,
                     onGroupLongPress = onGroupLongPress
@@ -527,7 +529,7 @@ private fun BoardCanvas(
                 NotebookGrid(
                     notebooks = content.ungroupedNotebooks,
                     columns = columns,
-                    counts = counts,
+                    factoidsMap = factoidsMap,
                     onOpenNotebook = onOpenNotebook,
                     onNotebookLongPress = onNotebookLongPress
                 )
@@ -541,24 +543,21 @@ private fun BoardCanvas(
 private fun GroupFrame(
     item: GroupWithNotebooks,
     columns: Int,
-    counts: Map<Long, Int>,
+    factoidsMap: Map<Long, List<FactoidEntity>>,
     onOpenNotebook: (Long) -> Unit,
     onNotebookLongPress: (NotebookEntity) -> Unit,
     onGroupLongPress: (GroupEntity) -> Unit
 ) {
     val group = item.group
     val color = paletteColorAt(group.colorIndex)
-    val shape = RoundedCornerShape(20.dp)
-    val sizeModifier = if (item.notebooks.isEmpty()) {
-        Modifier.widthIn(min = 160.dp)
-    } else {
-        Modifier.fillMaxWidth()
-    }
+    val shape = RoundedCornerShape(16.dp)
 
     Column(
-        modifier = sizeModifier
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 140.dp)
             .clip(shape)
-            .background(color.copy(alpha = 0.18f), shape)
+            .background(color.copy(alpha = 0.14f), shape)
             .border(2.dp, color, shape)
             .combinedClickable(
                 onClick = {},
@@ -570,7 +569,7 @@ private fun GroupFrame(
         Text(
             text = group.name,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -579,10 +578,24 @@ private fun GroupFrame(
             NotebookGrid(
                 notebooks = item.notebooks,
                 columns = columns,
-                counts = counts,
+                factoidsMap = factoidsMap,
                 onOpenNotebook = onOpenNotebook,
                 onNotebookLongPress = onNotebookLongPress
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 80.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Пустая группа (удерживайте блокнот, чтобы добавить сюда)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -592,7 +605,7 @@ private fun GroupFrame(
 private fun NotebookGrid(
     notebooks: List<NotebookEntity>,
     columns: Int,
-    counts: Map<Long, Int>,
+    factoidsMap: Map<Long, List<FactoidEntity>>,
     onOpenNotebook: (Long) -> Unit,
     onNotebookLongPress: (NotebookEntity) -> Unit
 ) {
@@ -605,7 +618,7 @@ private fun NotebookGrid(
                 rowItems.forEach { notebook ->
                     NotebookTile(
                         notebook = notebook,
-                        count = counts[notebook.id] ?: 0,
+                        factoids = factoidsMap[notebook.id].orEmpty(),
                         onClick = { onOpenNotebook(notebook.id) },
                         onLongClick = { onNotebookLongPress(notebook) },
                         modifier = Modifier
@@ -625,37 +638,65 @@ private fun NotebookGrid(
 @Composable
 private fun NotebookTile(
     notebook: NotebookEntity,
-    count: Int,
+    factoids: List<FactoidEntity>,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val background = paletteColorAt(notebook.colorIndex)
     val textColor = readableContentColor(background)
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(14.dp)
+    val previewItems = remember(factoids) { factoids.take(3) }
+    val remainingCount = (factoids.size - previewItems.size).coerceAtLeast(0)
 
-    Box(
+    Column(
         modifier = modifier
             .clip(shape)
             .background(background, shape)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .semantics { contentDescription = "Блокнот ${notebook.name}, заметок: $count" }
-            .padding(10.dp)
+            .semantics { contentDescription = "Блокнот ${notebook.name}, заметок: ${factoids.size}" }
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
             text = notebook.name,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
             color = textColor,
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.TopStart)
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
-        Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            color = textColor.copy(alpha = 0.8f),
-            modifier = Modifier.align(Alignment.BottomEnd)
-        )
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            previewItems.forEach { factoid ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(textColor.copy(alpha = 0.14f))
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = factoid.text,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        if (remainingCount > 0) {
+            Text(
+                text = "+$remainingCount ещё",
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.75f),
+                modifier = Modifier.align(Alignment.End)
+            )
+        }
     }
 }

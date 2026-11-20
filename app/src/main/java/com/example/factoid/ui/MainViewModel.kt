@@ -110,12 +110,13 @@ class MainViewModel(private val repository: FactoidRepository) : ViewModel() {
         .flatMapLatest { repository.observeNotebooks(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), emptyList())
 
-    val notebookFactoidCounts: StateFlow<Map<Long, Int>> = _activeBoardId.filterNotNull()
+    val notebookFactoidsMap: StateFlow<Map<Long, List<FactoidEntity>>> = _activeBoardId.filterNotNull()
         .flatMapLatest { repository.observeActiveFactoids(it) }
         .map { list ->
-            list.mapNotNull { it.notebookId }.groupingBy { it }.eachCount()
+            list.filter { it.notebookId != null }.groupBy { it.notebookId!! }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), emptyMap())
+
 
     val selectedNotebook: StateFlow<NotebookEntity?> = _selectedNotebookId
         .flatMapLatest { id -> if (id == null) flowOf(null) else repository.observeNotebook(id) }
