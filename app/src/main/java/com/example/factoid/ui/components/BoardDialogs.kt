@@ -405,7 +405,8 @@ fun QuickAddSheet(
             )
             OutlinedTextField(
                 value = text,
-                onValueChange = { text = it },
+                onValueChange = { if (it.length <= 200) text = it },
+                supportingText = { Text("${text.length} / 200") },
                 label = { Text("Текст заметки") },
                 minLines = 3,
                 maxLines = 6,

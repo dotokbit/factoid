@@ -646,8 +646,6 @@ private fun NotebookTile(
     val background = paletteColorAt(notebook.colorIndex)
     val textColor = readableContentColor(background)
     val shape = RoundedCornerShape(14.dp)
-    val previewItems = remember(factoids) { factoids.take(3) }
-    val remainingCount = (factoids.size - previewItems.size).coerceAtLeast(0)
 
     Column(
         modifier = modifier
@@ -668,10 +666,12 @@ private fun NotebookTile(
         )
 
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            previewItems.forEach { factoid ->
+            factoids.forEach { factoid ->
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -688,15 +688,6 @@ private fun NotebookTile(
                     )
                 }
             }
-        }
-
-        if (remainingCount > 0) {
-            Text(
-                text = "+$remainingCount ещё",
-                style = MaterialTheme.typography.labelSmall,
-                color = textColor.copy(alpha = 0.75f),
-                modifier = Modifier.align(Alignment.End)
-            )
         }
     }
 }

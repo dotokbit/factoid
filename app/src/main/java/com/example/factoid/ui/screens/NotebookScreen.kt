@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +58,9 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.FloatingActionButton
+import com.example.factoid.ui.components.TextInputDialog
 import com.example.factoid.data.local.entity.FactoidEntity
 import com.example.factoid.data.local.entity.NotebookEntity
 import com.example.factoid.ui.MainViewModel
@@ -63,8 +68,6 @@ import com.example.factoid.ui.components.ActionMenuDialog
 import com.example.factoid.ui.components.MenuAction
 import com.example.factoid.ui.components.paletteColorAt
 import com.example.factoid.ui.components.readableContentColor
-import java.text.DateFormat
-import java.util.Date
 
 internal enum class FactoidStep { MENU, EDIT, MOVE }
 
@@ -86,9 +89,6 @@ internal class FactoidActionsState {
 @Composable
 internal fun rememberFactoidActionsState(): FactoidActionsState = remember { FactoidActionsState() }
 
-internal fun formatTimestamp(millis: Long): String =
-    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun FactoidCard(
@@ -97,12 +97,24 @@ internal fun FactoidCard(
     contentColor: Color,
     modifier: Modifier = Modifier,
     caption: String? = null,
+    scrollable: Boolean = false,
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     val haptic = LocalHapticFeedback.current
     val shape = RoundedCornerShape(16.dp)
+    val innerModifier = if (scrollable) {
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -123,9 +135,7 @@ internal fun FactoidCard(
         )
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = innerModifier,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -140,11 +150,6 @@ internal fun FactoidCard(
                     color = contentColor.copy(alpha = 0.7f)
                 )
             }
-            Text(
-                text = formatTimestamp(factoid.updatedAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor.copy(alpha = 0.6f)
-            )
             if (actions != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -202,7 +207,7 @@ internal fun FactoidEditDialog(
         text = {
             OutlinedTextField(
                 value = value,
-                onValueChange = { value = it },
+                onValueChange = { if (it.length <= 200) value = it },
                 label = { Text("Текст заметки") },
                 minLines = 3,
                 maxLines = 8,
@@ -323,6 +328,7 @@ fun NotebookScreen(
     val factoids by viewModel.notebookFactoids.collectAsState()
     val notebooks by viewModel.notebooks.collectAsState()
     val state = rememberFactoidActionsState()
+    var showAddDialog by rememberSaveable { mutableStateOf(false) }
 
     val containerColor = notebook?.let { paletteColorAt(it.colorIndex) }
         ?: MaterialTheme.colorScheme.surfaceVariant
@@ -345,7 +351,15 @@ fun NotebookScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (notebook != null) {
+                FloatingActionButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Добавить заметку")
+                }
+            }
         }
+
     ) { padding ->
         if (factoids.isEmpty()) {
             Box(
@@ -363,18 +377,22 @@ fun NotebookScreen(
                 )
             }
         } else {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(factoids, key = { it.id }) { factoid ->
                     FactoidCard(
                         factoid = factoid,
                         containerColor = containerColor,
                         contentColor = contentColor,
+                        modifier = Modifier.aspectRatio(1f),
+                        scrollable = true,
                         onClick = {},
                         onLongClick = { state.open(factoid) }
                     )
@@ -389,5 +407,51 @@ fun NotebookScreen(
         notebooks = notebooks,
         allowMoveToInbox = true
     )
+    if (showAddDialog) {
+        val currentNotebook = notebook
+        if (currentNotebook != null) {
+            AlertDialog(
+                onDismissRequest = { showAddDialog = false },
+                title = { Text("Новая заметка") },
+                text = {
+                    var newText by rememberSaveable { mutableStateOf("") }
+                    Column {
+                        OutlinedTextField(
+                            value = newText,
+                            onValueChange = { if (it.length <= 200) newText = it },
+                            label = { Text("Текст заметки") },
+                            supportingText = { Text("${newText.length} / 200") },
+                            minLines = 3,
+                            maxLines = 6,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { showAddDialog = false }) {
+                                Text("Отмена")
+                            }
+                            TextButton(
+                                onClick = {
+                                    viewModel.addFactoidToNotebook(currentNotebook.id, newText)
+                                    showAddDialog = false
+                                },
+                                enabled = newText.isNotBlank()
+                            ) {
+                                Text("Добавить")
+                            }
+                        }
+                    }
+                },
+                confirmButton = {}
+            )
+        }
+    }
+
 }
 

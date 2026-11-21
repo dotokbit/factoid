@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+
 sealed interface UiEvent {
     data class Message(val text: String, val isError: Boolean = false) : UiEvent
     data class OpenNotebook(val notebookId: Long) : UiEvent
