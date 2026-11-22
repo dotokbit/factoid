@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.factoid"
+        applicationId = "com.dotokbit.factoid"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
