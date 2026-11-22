@@ -5,8 +5,9 @@
 The app is designed with a focus on reducing working-memory load and cognitive offloading (including for people with ADHD, autism, and AuDHD): no complex nested folders, endless canvases, registration, or cloud synchronization — just instant launch and a clear visual "matryoshka" structure.
 
 #### Screenshots
-
-*To add screenshots, create a `screenshots` folder in the project root, place two files there (board.png and notebook.png), and uncomment the lines below:*
+| Board Screen | Notebook Screen |
+| :---: | :---: |
+| <img src="screenshots/board.png" width="250"> | <img src="screenshots/notebook.png" width="250"> |
 
 #### Key features and UX decisions
 
