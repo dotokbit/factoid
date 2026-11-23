@@ -105,7 +105,8 @@ fun BoardScreen(
     onOpenInbox: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenTrash: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit
 ) {
     val boards by viewModel.boards.collectAsState()
     val activeBoard by viewModel.activeBoard.collectAsState()
@@ -212,6 +213,14 @@ fun BoardScreen(
                             onOpenSettings()
                         }
                     )
+                    DrawerItem(
+                        label = "О программе",
+                        onClick = {
+                            closeDrawer()
+                            onOpenAbout()
+                        }
+                    )
+
                 }
             }
         }

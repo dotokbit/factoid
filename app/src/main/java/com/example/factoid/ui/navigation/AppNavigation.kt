@@ -41,6 +41,7 @@ import com.example.factoid.ui.screens.NotebookScreen
 import com.example.factoid.ui.screens.SearchScreen
 import com.example.factoid.ui.screens.SettingsScreen
 import com.example.factoid.ui.screens.TrashScreen
+import com.example.factoid.ui.screens.AboutScreen
 import kotlinx.coroutines.launch
 
 object Routes {
@@ -51,6 +52,7 @@ object Routes {
     const val SEARCH = "search"
     const val TRASH = "trash"
     const val SETTINGS = "settings"
+    const val ABOUT = "about"
 
     fun notebook(notebookId: Long): String = "notebook/$notebookId"
 }
@@ -136,6 +138,9 @@ fun AppNavigation(
                         },
                         onOpenSettings = {
                             navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                        },
+                        onOpenAbout = {
+                            navController.navigate(Routes.ABOUT) { launchSingleTop = true }
                         }
                     )
                 }
@@ -202,8 +207,14 @@ fun AppNavigation(
                         onBack = { navController.popBackStack() }
                     )
                 }
+                composable(Routes.ABOUT) {
+                    AboutScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
+                }
             }
-        }
 
         if (isBackupBusy) {
             LinearProgressIndicator(
