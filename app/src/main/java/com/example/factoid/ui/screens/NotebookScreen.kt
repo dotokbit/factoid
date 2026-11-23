@@ -207,7 +207,7 @@ internal fun FactoidEditDialog(
         text = {
             OutlinedTextField(
                 value = value,
-                onValueChange = { if (it.length <= 200) value = it },
+                onValueChange = { if (it.length <= 60) value = it },
                 label = { Text("Текст заметки") },
                 minLines = 3,
                 maxLines = 8,
